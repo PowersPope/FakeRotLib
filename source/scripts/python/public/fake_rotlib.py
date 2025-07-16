@@ -19,8 +19,10 @@ def parseArgs(argv):
     parser = argparse.ArgumentParser(description="This script uses RDKit and molfile_to_params_polymer.py to "
                                      "quickly parameterize a NCAA for use in Rosetta")
     parser.add_argument("-i","--input",required=False,metavar="FILE",
-                        help="Input sdf mol file (REQUIRED)")
-    parser.add_argument("-s","--smile",required=True,metavar=str,
+                        help="Input sdf mol file")
+    parser.add_argument("-f","--input_name",required=True,metavar="STR",
+                        help="SMILE input name for our NCAA")
+    parser.add_argument("-s","--smile",required=True,metavar="STR",
                         help="SMILE input of our NCAA")
     parser.add_argument("-n","--top_n_confs",type=int,metavar="N",
                         default = 1000,
@@ -564,7 +566,10 @@ def fakeRotLib(pdbrot, params):
 
 if __name__ == "__main__":
     args = parseArgs(sys.argv[1:])
-    noext = os.path.splitext(args.input)[0]
+    if args.input != None:
+        noext = os.path.splitext(args.input)[0]
+    else:
+        noext = args.input_name
     ncaaName = os.path.basename(noext)[:3].upper()
 
     #Generate dipeptide form and RosettaParams instructions
@@ -586,6 +591,8 @@ if __name__ == "__main__":
                 ncaamol = Chem.MolFromMolFile(args.input)
             else:
                 ncaamol = Chem.MolFromSmiles(args.smile)
+#                 ncaamol = Chem.AddHs(ncaamol)
+                AllChem.EmbedMolecule(ncaamol)
             if ncaamol == None:
                 raise Exception("Molecule read-in returned None.")
         except Exception as e:
