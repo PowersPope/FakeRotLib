@@ -18,8 +18,10 @@ except:
 def parseArgs(argv):
     parser = argparse.ArgumentParser(description="This script uses RDKit and molfile_to_params_polymer.py to "
                                      "quickly parameterize a NCAA for use in Rosetta")
-    parser.add_argument("-i","--input",required=True,metavar="FILE",
+    parser.add_argument("-i","--input",required=False,metavar="FILE",
                         help="Input sdf mol file (REQUIRED)")
+    parser.add_argument("-s","--smile",required=True,metavar=str,
+                        help="SMILE input of our NCAA")
     parser.add_argument("-n","--top_n_confs",type=int,metavar="N",
                         default = 1000,
                         help="Top number of generated conformations to use as rotamers (default: %(default)s)")
@@ -45,6 +47,109 @@ def parseArgs(argv):
                         default=False,
                         help="If specified, no geometry optimization or conformer generation will occur. MUST be used with --dip.")
     return parser.parse_args()
+
+# Create dipeptide SMILE
+def dipeptide_gen(smile: str) -> str:
+    """Generate a dipeptide representation of our input string.
+        Given that our input follows a N-Ca-O=C alpha-amino acid structure
+
+    PARAMS
+    ------
+    :smile: Input non-canonical SMILE (single amino acid)
+    """
+    in_mol = Chem.MolFromSmiles(smile)
+    dup_mol = Chem.MolFromSmiles(smile)
+    in_mol = Chem.AddHs(in_mol)
+    dup_mol = Chem.AddHs(dup_mol)
+    
+    # We need to grab thte Amide H and remove it and the C(=O)H hydrogen to allow the
+    # single bond when we duplicate and construct a dipeptide
+    for atom in in_mol.GetAtoms():
+        # Grab out the nterminal Nitrogen
+        if ((atom.GetSymbol() == "N") and (atom.GetTotalDegree() == 3)):
+            neighbors = [c.GetSymbol() for c in atom.GetNeighbors()]
+            # check to see that our N is a terminal N
+            print("Checking for NH2 atom")
+            for natom in ["C", "H", "H"]:
+                if natom in neighbors:
+                    neighbors.remove(natom)
+                    print("Atom %i with neighors: %s" % (atom.GetIdx(), str(neighbors)))
+            if len(neighbors) == 0:
+                print("Pass Neighbor Check:", atom)
+                nTermNitrogenAtom = atom
+
+        # Grab out the C-terminal Carbon
+        elif ((atom.GetSymbol() == "C") and (atom.GetTotalDegree() == 3)):
+            neighbors = [c.GetSymbol() for c in atom.GetNeighbors()]
+            # check to see that our N is a terminal N
+            print("Checking for C(=O)H atom")
+            for natom in ["C", "O", "O"]:
+                if natom in neighbors:
+                    neighbors.remove(natom)
+                    print("Atom %i with neighors: %s" % (atom.GetIdx(), str(neighbors)))
+            if len(neighbors) == 0:
+                print("Pass Neighbor Check:", atom)
+                cTermCarbonAtom = atom
+
+    # Removce the Hydrogen from N termin for our duplicate
+    hydrogenAmide = [a for a in nTermNitrogenAtom.GetNeighbors() if a.GetSymbol() == "H"][0]
+    hydrogenCarboxyl = [
+            a for a in cTermCarbonAtom.GetNeighbors() 
+            if (a.GetSymbol() == "O") and 
+            (str(in_mol.GetBondBetweenAtoms(a.GetIdx(), cTermCarbonAtom.GetIdx()).GetBondType()) == "SINGLE")
+            ][0]
+    em_dup = Chem.EditableMol(dup_mol)
+    em_in = Chem.EditableMol(in_mol)
+    em_dup.RemoveAtom(hydrogenAmide.GetIdx())
+    em_in.RemoveAtom(hydrogenCarboxyl.GetIdx())
+
+    # Get the edited Molecule
+    in_mol = em_in.GetMol()
+    dup_mol = em_dup.GetMol()
+    Chem.SanitizeMol(in_mol)
+    Chem.SanitizeMol(dup_mol)
+
+    # Combine the molecules
+    dipep = Chem.CombineMols(in_mol, dup_mol)
+    em_dipep = Chem.EditableMol(dipep)
+
+    # Get our offset amount from the first mol
+    offset = in_mol.GetNumAtoms()
+
+    # Add a single bond connecting the two amino acids
+    em_dipep.AddBond(
+            cTermCarbonAtom.GetIdx(),
+            nTermNitrogenAtom.GetIdx() + offset,
+            order = Chem.rdchem.BondType.SINGLE,
+            )
+
+    # Remove the lone hydrogens
+    for a in dipep.GetAtoms():
+        print("Atom: %s and Neighbors: %s" % (a.GetSymbol(), str([a.GetSymbol() for a in a.GetNeighbors()])))
+        if a.GetSymbol() == "H" and ["H"] == [a.GetSymbol() for a in a.GetNeighbors()]:
+            print("Atom: %s and Idx: %i, Degree: %i" % (a.GetSymbol(), a.GetIdx(), a.GetTotalDegree()))
+            for c in a.GetNeighbors():
+                print("Remove Atom Idx %i" % c.GetIdx())
+                em_dipep.RemoveAtom(c.GetIdx())
+            print("Remove Atom Idx %i" % a.GetIdx())
+            em_dipep.RemoveAtom(a.GetIdx())
+        elif a.GetSymbol() == "H" and len([a.GetSymbol() for a in a.GetNeighbors()]) == 0:
+            print("No Degree Atom Removed (Floating Hydrogen)")
+            em_dipep.RemoveAtom(a.GetIdx())
+
+
+        for a in em_dipep.GetAtoms():
+            if a.GetSymbol() == "H" and a.GetTotalDegree() == 0:
+                print("Remove Atom Idx %i" % a.GetIdx())
+                em_dipep.removeAtom(a.GetIdx())
+
+    complete_dipep = em_dipep.GetMol()
+    Chem.SanitizeMol(complete_dipep)
+    
+    return complete_dipep
+
+
+
 
 #Write atom assignments in molecule SDF for m2pp to read
 def generateInstructions(dipmol, nCbb):
@@ -465,7 +570,10 @@ if __name__ == "__main__":
     #Generate dipeptide form and RosettaParams instructions
     if args.dip:
         try:
-            ncaamol = Chem.MolFromMolFile(args.input, removeHs=False)
+            if args.input != None:
+                ncaamol = Chem.MolFromMolFile(args.input, removeHs=False)
+            else:
+                ncaamol = dipeptide_gen(args.smile)
             if ncaamol == None:
                 raise Exception("Molecule read-in returned None.")
         except Exception as e:
@@ -474,7 +582,10 @@ if __name__ == "__main__":
         instructions = generateInstructions(ncaamol, args.n_cbb)
     else:
         try:
-            ncaamol = Chem.MolFromMolFile(args.input)
+            if args.input != None:
+                ncaamol = Chem.MolFromMolFile(args.input)
+            else:
+                ncaamol = Chem.MolFromSmiles(args.smile)
             if ncaamol == None:
                 raise Exception("Molecule read-in returned None.")
         except Exception as e:
