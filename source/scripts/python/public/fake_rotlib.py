@@ -20,10 +20,14 @@ def parseArgs(argv):
                                      "quickly parameterize a NCAA for use in Rosetta")
     parser.add_argument("-i","--input",required=False,metavar="FILE",
                         help="Input sdf mol file")
-    parser.add_argument("-f","--input_name",required=True,metavar="STR",
-                        help="SMILE input name for our NCAA")
-    parser.add_argument("-s","--smile",required=True,metavar="STR",
-                        help="SMILE input of our NCAA")
+    parser.add_argument("-f","--input_name",required=False,metavar="STR",
+                        help="SMILE input name for our NCAA (REQUIRED WITH --smile)")
+    parser.add_argument("-s","--smile",required=False,metavar="STR",
+                        help="SMILE input of our NCAA (REQUIRED WITH --input_name)")
+    parser.add_argument("-k","--capped",required=False,action="store_true",
+                        help="Is our input capped?")
+    parser.add_argument("-a","--alpha-variant",required=False,action="store_true",
+                        help="Does our NCAA have a variant of an alpha AA. Such as a single bonded C-O?")
     parser.add_argument("-n","--top_n_confs",type=int,metavar="N",
                         default = 1000,
                         help="Top number of generated conformations to use as rotamers (default: %(default)s)")
@@ -154,12 +158,19 @@ def dipeptide_gen(smile: str) -> str:
 
 
 #Write atom assignments in molecule SDF for m2pp to read
-def generateInstructions(dipmol, nCbb):
+def generateInstructions(dipmol, nCbb, alpha_variant: bool = False, capped: bool = False):
     #This whole thing hinges on the assumption that the identified backbone atoms will be in the same order as the smiles string
     #If this is no longer the case, may God help us all
     instructions = "\n> <RosettaParamsInstructions>\n"
     cbb = "C"*nCbb
-    backbone = dipmol.GetSubstructMatch(Chem.MolFromSmiles("CNC(=O)%sNC(=O)C"%cbb))
+    print(Chem.MolToSmiles(dipmol))
+    if alpha_variant:
+        backbone = dipmol.GetSubstructMatch(Chem.MolFromSmiles("CNC(O)%sNC(O)C"%cbb))
+#         backbone = ncaamol.GetSubstructMatches(Chem.MolFromSmiles("N%sCOO"%cbb))
+    else:                                                                              
+        backbone = dipmol.GetSubstructMatch(Chem.MolFromSmiles("CNC(=O)%sNC(=O)C"%cbb))
+    print("Backbone number %i" % len(backbone))
+#     backbone = dipmol.GetSubstructMatch(Chem.MolFromSmiles("CNC(=O)%sNC(=O)C"%cbb)) Initial Input
     ignore = [backbone[0], backbone[6+nCbb], backbone[7+nCbb]]
 
     #I wouldn't have to do this if RDKit would make bonds consistently bidirectional...
@@ -228,10 +239,20 @@ def generateInstructions(dipmol, nCbb):
     return instructions
 
 #Attach dipeptide caps onto the NCAA
-def generateDip(ncaamol, nCbb):
+def generateDip(ncaamol, nCbb, alpha_variant: bool = False, capped: bool =False):
     #Cap all N and find the results that look like capped backbone
     cbb = "C"*nCbb
-    backbone = ncaamol.GetSubstructMatches(Chem.MolFromSmiles("N%sC(=O)O"%cbb))
+    if alpha_variant:
+        if capped:
+            backbone = ncaamol.GetSubstructMatches(Chem.MolFromSmiles("N%sCOO"%cbb))
+        else:
+            backbone = ncaamol.GetSubstructMatches(Chem.MolFromSmiles("N%sCO"%cbb))
+    else:                                                                              
+        if capped:                                                                     
+            backbone = ncaamol.GetSubstructMatches(Chem.MolFromSmiles("N%sC(=O)O"%cbb))
+        else:
+            backbone = ncaamol.GetSubstructMatches(Chem.MolFromSmiles("N%sC(=O)"%cbb)) 
+    print("Backbone number %i" % len(backbone))
     if len(backbone) > 1:
         print("ERROR: More than one substructure looks like the backbone.")
         exit(2)
@@ -283,7 +304,7 @@ def generateDip(ncaamol, nCbb):
     geomOptimize(dipmol, 1000)
     rdb.EnableLog("rdApp.warning")
     dipmol = Chem.AddHs(dipmol)
-    instructions = generateInstructions(dipmol, nCbb)
+    instructions = generateInstructions(dipmol, nCbb, alpha_variant, capped)
     return (dipmol, instructions)
 
 #Optimize geometry of NCAA
@@ -598,7 +619,7 @@ if __name__ == "__main__":
         except Exception as e:
             print("ERROR reading in SDF file:",e)
             exit(1)
-        ncaamol, instructions = generateDip(ncaamol, args.n_cbb)
+        ncaamol, instructions = generateDip(ncaamol, args.n_cbb, args.alpha_variant, args.capped)
         #Optimize geometry using UFF (or MMFF if specified)
         geomOptimize(ncaamol, args.rdkit_max_iter, mmff=args.mmff)
 
