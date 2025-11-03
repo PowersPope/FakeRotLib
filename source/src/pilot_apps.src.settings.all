@@ -65,6 +65,9 @@ sources = {
 		#"relax_jd3",
 		#"test_ik_match",
 	],
+	"pilot/andrewpowers" : [
+  "bootcamp",
+  ],
 	"pilot/aroop" : [
 		#"antibody_mode", # /* Aroop,Documentation Location,Demo Location */
 		#"model_e2c_ubiquitin", # /* Aroop,Documentation Location,Demo Location */
