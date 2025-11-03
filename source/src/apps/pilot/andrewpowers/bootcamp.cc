@@ -14,18 +14,34 @@
 #include <src/core/pose/Pose.fwd.hh>
 #include <src/core/import_pose/import_pose.hh>
 #include <utility/pointer/owning_ptr.hh>
+#include <src/core/scoring/ScoreFunctionFactory.hh>
+#include <src/core/scoring/ScoreFunction.hh>
 
 int main( int argc, char ** argv) {
+	// Init Rosetta as a whole
 	devel::init( argc, argv );
+	// Init our scorefunction
+	core::scoring::ScoreFunctionOP scorefxn = core::scoring::get_score_function("ref2015"); 
+
+	// Check if we get a pdb
 	utility::vector1< std::string > filenames = basic::options::option[basic::options::OptionKeys::in::file::s ].value();
+
 	if ( filenames.size() > 0 ) {
 		std::cout << "You entered: " << filenames[1] << " as the PDB file to be read" << std::endl;
-		core::pose::PoseOP mypose = core::import_pose::pose_from_file( filenames[1] );
 	} else {
 		std::cout << "You didn't provide a PDB file with the -in::file::s option" << std::endl;
 		return 1;
 	}
-	std::cout << "HHello World!" << std::endl;
+
+	// Load our file into a pose object
+	core::pose::PoseOP mypose = core::import_pose::pose_from_file( filenames[1] );
+
+	// Score our pose
+	core::Real score = scorefxn->score( * mypose );
+
+	// Output our score
+	std::cout << "File Score: " << score << std::endl;
+
 	return 0;
 }
 
