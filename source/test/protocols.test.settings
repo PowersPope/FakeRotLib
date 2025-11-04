@@ -10,6 +10,9 @@
 ########### KEEP DIRECTORIES AND FILES IN ALPHABETICAL ORDER ###########
 
 sources = {
+  "bootcamp" : [
+    "QueueTests",
+  ],
 	"aa_composition" : [
 		"AddHelixSequenceConstraintsMoverTests",
 		"AddMHCEpitopeConstraintMover"
