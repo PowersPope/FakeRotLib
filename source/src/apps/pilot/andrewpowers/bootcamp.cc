@@ -21,6 +21,12 @@
 #include <src/numeric/random/uniform.hh>
 #include <src/protocols/moves/MonteCarlo.hh>
 #include <src/core/conformation/Residue.hh>
+#include <src/core/pack/pack_rotamers.hh>
+#include <src/core/pack/task/PackerTask.hh>
+#include <src/core/pack/task/TaskFactory.hh>
+#include <src/core/kinematics/MoveMap.hh>
+#include <src/core/optimization/MinimizerOptions.hh>
+#include <src/core/optimization/AtomTreeMinimizer.hh>
 
 int main( int argc, char ** argv) {
 	// Init Rosetta as a whole
@@ -29,6 +35,12 @@ int main( int argc, char ** argv) {
 	core::scoring::ScoreFunctionOP scorefxn = core::scoring::get_score_function("ref2015"); 
 	// Set our random number generator
 	numeric::random::rg().set_seed("mt19937", 192); 
+	// Setup our Movemap
+	core::kinematics::MoveMap mm;
+	mm.set_bb( true );
+	mm.set_chi( true );
+	core::optimization::MinimizerOptions min_opts( "lbfgs_armijo_atol", 0.01, true );
+	core::optimization::AtomTreeMinimizer atm;
 
 
 	// Check if we get a pdb
@@ -54,24 +66,36 @@ int main( int argc, char ** argv) {
 // 	std::cout << "File Score: " << score << std::endl;
 
 	
-	// Monte Carlo change residues
-	for ( int i=0; i<10; i++ ) {
+	// Copy the pose
+	core::pose::Pose copy_pose;
+	// Monte Carlo change residues 
+	for ( int i=0; i<5; i++ ) {
 		core::Size size_pose = mypose->size();
 		core::Size randres = ( numeric::random::rg().uniform() * size_pose + 1 );
 		if ( mypose->residue( randres ).is_protein() ) {
+			// Determine our perterbation amounts
 			core::Real pert1 = numeric::random::rg().gaussian();
 			core::Real pert2 = numeric::random::rg().gaussian();
 			core::Real orig_phi = mypose->phi( randres );
 			core::Real orig_psi = mypose->psi( randres );
 			mypose->set_phi( randres, orig_phi + pert1 );
 			mypose->set_psi( randres, orig_psi + pert2 );
-			mc.boltzmann( * mypose );
+
+			// Pack our pose
+			core::pack::task::PackerTaskOP repack_task = core::pack::task::TaskFactory::create_packer_task( *mypose );
+			repack_task->restrict_to_repacking();
+			core::pack::pack_rotamers( *mypose, *scorefxn, repack_task );
+
+			// Copy and Minimize the pose
+			copy_pose = *mypose;
+			atm.run( copy_pose, mm, *scorefxn, min_opts );
+			*mypose = copy_pose;
+			mc.boltzmann( *mypose );
 			std::cout << "MC MOVEMENT!!! Round: " << i << std::endl;
 		}
 	}
 
-// 	std::cout << "Random Res: " << randres << " Pert1: " << orig_phi + pert1 << std::endl;
-// 	std::cout << "Random Res: " << randres << " Pert2: " << orig_psi + pert2 << std::endl;
+	std::cout << "Final Score output: " << mc.last_accepted_score() << std::endl;
 
 	return 0;
 }
