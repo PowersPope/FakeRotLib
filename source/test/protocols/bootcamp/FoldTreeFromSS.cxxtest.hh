@@ -19,7 +19,10 @@
 #include <test/core/init_util.hh>
 #include <core/pose/Pose.hh>
 #include <core/kinematics/FoldTree.hh>
+#include <core/kinematics/Edge.hh>
 #include <core/scoring/dssp/Dssp.hh>
+#include <test/util/pose_funcs.hh>
+#include <protocols/bootcamp/fold_tree_from_ss.hh>
 
 // Utility headers
 #include <utility/vector1.hh>
@@ -62,99 +65,160 @@ public:
 
 
 	// --------- Function Testing --------------------- //
-	// Func Test1
-	utility::vector1< std::pair< core::Size, core::Size > >
-	identify_secondary_structure_spans( std::string const & ss_string )
-	{
-		utility::vector1< std::pair< core::Size, core::Size > > ss_boundaries;
-		core::Size strand_start = -1;
-		for ( core::Size ii = 0; ii < ss_string.size(); ++ii ) {
-			if ( ss_string[ ii ] == 'E' || ss_string[ ii ] == 'H'  ) {
-				if ( int( strand_start ) == -1 ) {
-					strand_start = ii;
-				} else if ( ss_string[ii] != ss_string[strand_start] ) {
-					ss_boundaries.push_back( std::make_pair( strand_start+1, ii ) );
-					strand_start = ii;
-				}
-			} else {
-				if ( int( strand_start ) != -1 ) {
-					ss_boundaries.push_back( std::make_pair( strand_start+1, ii ) );
-					strand_start = -1;
-				}
-			}
-		}
-		if ( int( strand_start ) != -1 ) {
-			// last residue was part of a ss-eleemnt                                                                                                                                
-			ss_boundaries.push_back( std::make_pair( strand_start+1, ss_string.size() ));
-		}
-		for ( core::Size ii = 1; ii <= ss_boundaries.size(); ++ii ) {
-			std::cout << "SS Element " << ii << " from residue "
-				<< ss_boundaries[ ii ].first << " to "
-				<< ss_boundaries[ ii ].second << std::endl;
-		}
-		return ss_boundaries;
-	}
-
-	// Func Test 2
-	// @brief This takes in a pose and returns a FoldTree for the given pose.
-	core::kinematics::FoldTree fold_tree_from_ss( core::pose::Pose inpose ) {
-		// Init our return variable
-		core::kinematics::FoldTree out_fold_tree;
-
-		// Initialize a dssp, and extract out our secondary structure sequence
-		core::scoring::dssp::Dssp dssp( inpose );
-		std::string dssp_string = dssp.get_dssp_secstruct();
-
-		// Pass our dssp string to fold_tree_from_dssp_string to get our new FoldTree
-		out_fold_tree = fold_tree_from_dssp_string( dssp_string );
-
-		return out_fold_tree;
-	}
-
-	// Func Test 3
-	// @brief take in a dssp based string and return a FoldTree that can be passed to a pose.
-	core::kinematics::FoldTree fold_tree_from_dssp_string( std::string const in_dssp ) {
-		core::kinematics::FoldTree testout;
-
-		// Pass our sequence to our original function to extract out a vector1< pair< Size, Size >>
-		utility::vector1< std::pair< core::Size, core::Size >> vector_dssp_pairs = identify_secondary_structure_spans( in_dssp );
-
-		return testout;
-	}
-	// Func Test 4
-	// @brief determine the middle residue of our range
-	core::Size determine_middle_residue( core::Size start, core::Size end ) {
-		// Init our vector to hold this information
-		utility::vector1< core::Size > resi_vector;
-		int middle;
-
-		// First make our vector to get the size and to index later on
-		std::cout << "Vector:";
-		for ( core::Size j=start; j<=end; j++ ) {
-			std::cout << " " << j << " ";
-			resi_vector.push_back(j);
-		}
-		std::cout << std::endl;
-		std::cout << "Vector size: " << resi_vector.size() << std::endl;
-			
-		// Determine if our size is even or not
-		if ( resi_vector.size() % 2 == 0 ) {
-			middle = std::floor( resi_vector.size() / 2 );
-		} else {
-			middle = std::floor( resi_vector.size() / 2 ) + 1;
-		}
-		core::Size anchor_residue = resi_vector[middle];
-		std::cout << "Anchor Middle Residue: " << anchor_residue << std::endl;
-		return anchor_residue;
-	}
+// 	// Func Test1
+// 	utility::vector1< std::pair< core::Size, core::Size > >
+// 	identify_secondary_structure_spans( std::string const & ss_string )
+// 	{
+// 		utility::vector1< std::pair< core::Size, core::Size > > ss_boundaries;
+// 		core::Size strand_start = -1;
+// 		for ( core::Size ii = 0; ii < ss_string.size(); ++ii ) {
+// 			if ( ss_string[ ii ] == 'E' || ss_string[ ii ] == 'H'  ) {
+// 				if ( int( strand_start ) == -1 ) {
+// 					strand_start = ii;
+// 				} else if ( ss_string[ii] != ss_string[strand_start] ) {
+// 					ss_boundaries.push_back( std::make_pair( strand_start+1, ii ) );
+// 					strand_start = ii;
+// 				}
+// 			} else {
+// 				if ( int( strand_start ) != -1 ) {
+// 					ss_boundaries.push_back( std::make_pair( strand_start+1, ii ) );
+// 					strand_start = -1;
+// 				}
+// 			}
+// 		}
+// 		if ( int( strand_start ) != -1 ) {
+// 			// last residue was part of a ss-eleemnt                                                                                                                                
+// 			ss_boundaries.push_back( std::make_pair( strand_start+1, ss_string.size() ));
+// 		}
+// 		for ( core::Size ii = 1; ii <= ss_boundaries.size(); ++ii ) {
+// 			std::cout << "SS Element " << ii << " from residue "
+// 				<< ss_boundaries[ ii ].first << " to "
+// 				<< ss_boundaries[ ii ].second << std::endl;
+// 		}
+// 		return ss_boundaries;
+// 	}
+// 
+// 	// Func Test 2
+// 	// @brief This takes in a pose and returns a FoldTree for the given pose.
+// 	core::kinematics::FoldTree fold_tree_from_ss( core::pose::Pose inpose ) {
+// 		// Init our return variable
+// 		core::kinematics::FoldTree out_fold_tree;
+// 
+// 		// Initialize a dssp, and extract out our secondary structure sequence
+// 		core::scoring::dssp::Dssp dssp( inpose );
+// 		std::string dssp_string = dssp.get_dssp_secstruct();
+// 
+// 		// Pass our dssp string to fold_tree_from_dssp_string to get our new FoldTree
+// 		out_fold_tree = fold_tree_from_dssp_string( dssp_string );
+// 
+// 		return out_fold_tree;
+// 	}
+// 
+// 	// Func Test 3
+// 	// @brief take in a dssp based string and return a FoldTree that can be passed to a pose.
+// 	core::kinematics::FoldTree fold_tree_from_dssp_string( std::string const & in_dssp ) {
+// 		core::kinematics::FoldTree ft;
+// 
+// // 		std::cout << "Length of our DSSP String Input: " << in_dssp.size() << std::endl;
+// 		// Pass our sequence to our original function to extract out a vector1< pair< Size, Size >>
+// 		utility::vector1< std::pair< core::Size, core::Size >> vector_dssp_pairs = identify_secondary_structure_spans( in_dssp );
+// 
+// 		// Iter through our ranges and grab the middle 
+// 		utility::vector1< core::Size > middle_vector;
+// 		for ( unsigned long int k=1; k<=vector_dssp_pairs.size(); k++ ) {
+// 			middle_vector.push_back( determine_middle_residue( vector_dssp_pairs[k].first, vector_dssp_pairs[k].second ) );
+// 		}
+// 
+// 		// Store variables to go through our loop
+// 		core::Size first_middle, previous_end, current_middle, current_start, current_end, jump;
+// 		first_middle = middle_vector[1];
+// 		previous_end = vector_dssp_pairs[1].second;
+// 		jump = 1;
+// 
+// 		// Form the initial edge, as our initial edge will always start at 1
+// 		ft.add_edge( first_middle, 1, core::kinematics::Edge::PEPTIDE );
+// 		ft.add_edge( first_middle, vector_dssp_pairs[1].second, core::kinematics::Edge::PEPTIDE );
+// 
+// 		// Generate our FoldTree by iterating through our two vector1s
+// 		core::Size skipped = 0;
+// 		for ( unsigned long int j=2; j<=vector_dssp_pairs.size(); j++ ) {
+// // 			std::cout << "Values Out: " << vector_dssp_pairs[j].first << " " << vector_dssp_pairs[j].second << std::endl;
+// 			// Assign our current values first
+// 			current_middle = middle_vector[j];
+// 			current_start = vector_dssp_pairs[j].first;
+// 			current_end = vector_dssp_pairs[j].second;
+// 
+// 			// Skip if the edge is only 1 residue long and add an additional residue to start for the next loop
+// 			if ( current_start == current_end ) { skipped++; continue; }
+// 			if ( skipped ) { current_start--; skipped = 0; }
+// 			// If the the previous_end and current_start dont follow then the previous region that was skipped was diordered and we 
+// 			// should assign that region as an edge and a jump as well.
+// 			if ( previous_end + 1 != current_start ) {
+// 				// First we add the jump from the previous foldtree to this new center
+// 				core::Size disordered_middle = determine_middle_residue( previous_end + 1, current_start - 1);
+// 				ft.add_edge( first_middle, disordered_middle, jump );
+// 				ft.add_edge( disordered_middle, previous_end + 1, core::kinematics::Edge::PEPTIDE );
+// 				ft.add_edge( disordered_middle, current_start - 1, core::kinematics::Edge::PEPTIDE );
+// 				jump++;
+// 			}
+// 
+// 			// First we add the jump from the previous foldtree to this new center
+// 			ft.add_edge( first_middle, current_middle, jump );
+// 			ft.add_edge( current_middle, current_start, core::kinematics::Edge::PEPTIDE );
+// 			if ( j == vector_dssp_pairs.size() ) {
+// 				ft.add_edge( current_middle, in_dssp.size(), core::kinematics::Edge::PEPTIDE );
+// 			} else {
+// 				ft.add_edge( current_middle, current_end, core::kinematics::Edge::PEPTIDE );
+// 			}
+// 
+// // 			previous_start = vector_dssp_pairs[j].first;
+// 			previous_end = vector_dssp_pairs[j].second;
+// 			jump++;
+// 		}
+// 
+// // 		std::cout << "Fold Tree output: " << ft.to_string() << std::endl;
+// 		return ft;
+// 	}
+// 
+// 	// Func Test 4
+// 	// @brief determine the middle residue of our range
+// 	core::Size determine_middle_residue( core::Size start, core::Size end ) {
+// 		// Init our vector to hold this information
+// 		utility::vector1< core::Size > resi_vector;
+// 		int middle;
+// 
+// 		// First make our vector to get the size and to index later on
+// 		for ( core::Size j=start; j<=end; j++ ) {
+// 			resi_vector.push_back(j);
+// 		}
+// 			
+// 		// Determine if our size is even or not
+// 		if ( resi_vector.size() % 2 == 0 ) {
+// 			middle = std::floor( resi_vector.size() / 2 );
+// 		} else {
+// 			middle = std::floor( resi_vector.size() / 2 ) + 1;
+// 		}
+// 		core::Size anchor_residue = resi_vector[middle];
+// 		return anchor_residue;
+// 	}
 
 	// --------------- Test Cases --------------- //
+	void test_from_pose() {
+		TR << "Running test on FoldTree from Pose Generation..." << std::endl;
+		core::kinematics::FoldTree test_out, test_in;
+		core::pose::Pose inpose = create_test_in_pdb_pose();
+		test_in = protocols::bootcamp::fold_tree_from_ss( inpose );
+		inpose.fold_tree(test_in);
+
+		TS_ASSERT( true );
+	}
+
 	void test_middle_func() {
 		TR << "Running test on middle function..." << std::endl;
 		// 120, 121, 122*, 123, 124, 125  (* denotes right answer)
-		core::Size test_out1 = determine_middle_residue(120, 125);
+		core::Size test_out1 = protocols::bootcamp::determine_middle_residue(120, 125);
 		// 120, 121, 122*, 123, 124  (* denotes right answer)
-		core::Size test_out2 = determine_middle_residue(120, 124);
+		core::Size test_out2 = protocols::bootcamp::determine_middle_residue(120, 124);
 		TS_ASSERT( test_out1 == 122 );
 		TS_ASSERT( test_out2 == 122 );
 	}
@@ -162,7 +226,7 @@ public:
 	void test_case1() {
 		TR << "Running First Test Case For SS Position Extraction (Should be 7 elements)..." << std::endl;
 		utility::vector1< std::pair< core::Size, core::Size > > vector_of_ss_pairs, control_pairs;
-		vector_of_ss_pairs = identify_secondary_structure_spans("   EEEEE   HHHHHHHH  EEEEE   IGNOR EEEEEE   HHHHHHHHHHH  EEEEE  HHHH");
+		vector_of_ss_pairs = protocols::bootcamp::identify_secondary_structure_spans("   EEEEE   HHHHHHHH  EEEEE   IGNOR EEEEEE   HHHHHHHHHHH  EEEEE  HHHH");
 
 		// Generate our control pairs vector to check against
 		control_pairs.push_back({4, 8});
@@ -183,7 +247,7 @@ public:
 	void test_case2() {
 		TR << "Running Second Test Case For SS Position Extraction (Should be 7 elements)..." << std::endl;
 		utility::vector1< std::pair< core::Size, core::Size > > vector_of_ss_pairs, control_pairs;
-		vector_of_ss_pairs = identify_secondary_structure_spans("HHHHHHH   HHHHHHHHHHHH      HHHHHHHHHHHHEEEEEEEEEEHHHHHHH EEEEHHH ");
+		vector_of_ss_pairs = protocols::bootcamp::identify_secondary_structure_spans("HHHHHHH   HHHHHHHHHHHH      HHHHHHHHHHHHEEEEEEEEEEHHHHHHH EEEEHHH ");
 
 		// Generate our control pairs vector to check against
 		control_pairs.push_back({1, 7});
@@ -204,7 +268,7 @@ public:
 	void test_case3() {
 		TR << "Running Third Test Case For SS Position Extraction (Should be 9 elements)..." << std::endl;
 		utility::vector1< std::pair< core::Size, core::Size > > vector_of_ss_pairs, control_pairs;
-		vector_of_ss_pairs = identify_secondary_structure_spans("EEEEEEEEE EEEEEEEE EEEEEEEEE H EEEEE H H H EEEEEEEE");
+		vector_of_ss_pairs = protocols::bootcamp::identify_secondary_structure_spans("EEEEEEEEE EEEEEEEE EEEEEEEEE H EEEEE H H H EEEEEEEE");
 
 		// Generate our control pairs vector to check against
 		control_pairs.push_back({1, 9});

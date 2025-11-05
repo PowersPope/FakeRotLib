@@ -66,10 +66,14 @@ int main( int argc, char ** argv) {
 // 	std::cout << "File Score: " << score << std::endl;
 
 	
-	// Copy the pose
+	// Copy the pose and init values
 	core::pose::Pose copy_pose;
+	core::Size accepted_moves = 0;
+	core::Real score_overtime = 0;
+	int steps = 4;
+
 	// Monte Carlo change residues 
-	for ( int i=0; i<5; i++ ) {
+	for ( int i=0; i<steps; i++ ) {
 		core::Size size_pose = mypose->size();
 		core::Size randres = ( numeric::random::rg().uniform() * size_pose + 1 );
 		if ( mypose->residue( randres ).is_protein() ) {
@@ -90,12 +94,15 @@ int main( int argc, char ** argv) {
 			copy_pose = *mypose;
 			atm.run( copy_pose, mm, *scorefxn, min_opts );
 			*mypose = copy_pose;
-			mc.boltzmann( *mypose );
-			std::cout << "MC MOVEMENT!!! Round: " << i << std::endl;
+			accepted_moves += mc.boltzmann( *mypose );
+			score_overtime += mc.last_score();
+			std::cout << "MonteCarlo Round: " << i << "Score of Move: " << mc.last_score() << std::endl;
 		}
 	}
 
 	std::cout << "Final Score output: " << mc.last_accepted_score() << std::endl;
+	std::cout << "Proportion of accepted moves: " << accepted_moves / steps << std::endl;
+	std::cout << "Average Score of protein: " << score_overtime / steps << std::endl;
 
 	return 0;
 }
