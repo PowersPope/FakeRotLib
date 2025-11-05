@@ -17,6 +17,9 @@
 
 #include <test/util/pose_funcs.hh>
 #include <test/core/init_util.hh>
+#include <core/pose/Pose.hh>
+#include <core/kinematics/FoldTree.hh>
+#include <core/scoring/dssp/Dssp.hh>
 
 // Utility headers
 #include <utility/vector1.hh>
@@ -26,6 +29,7 @@
 #include <core/types.hh>
 
 // C++ headers
+#include <cmath>
 
 //Auto Headers
 
@@ -58,6 +62,7 @@ public:
 
 
 	// --------- Function Testing --------------------- //
+	// Func Test1
 	utility::vector1< std::pair< core::Size, core::Size > >
 	identify_secondary_structure_spans( std::string const & ss_string )
 	{
@@ -90,7 +95,70 @@ public:
 		return ss_boundaries;
 	}
 
+	// Func Test 2
+	// @brief This takes in a pose and returns a FoldTree for the given pose.
+	core::kinematics::FoldTree fold_tree_from_ss( core::pose::Pose inpose ) {
+		// Init our return variable
+		core::kinematics::FoldTree out_fold_tree;
+
+		// Initialize a dssp, and extract out our secondary structure sequence
+		core::scoring::dssp::Dssp dssp( inpose );
+		std::string dssp_string = dssp.get_dssp_secstruct();
+
+		// Pass our dssp string to fold_tree_from_dssp_string to get our new FoldTree
+		out_fold_tree = fold_tree_from_dssp_string( dssp_string );
+
+		return out_fold_tree;
+	}
+
+	// Func Test 3
+	// @brief take in a dssp based string and return a FoldTree that can be passed to a pose.
+	core::kinematics::FoldTree fold_tree_from_dssp_string( std::string const in_dssp ) {
+		core::kinematics::FoldTree testout;
+
+		// Pass our sequence to our original function to extract out a vector1< pair< Size, Size >>
+		utility::vector1< std::pair< core::Size, core::Size >> vector_dssp_pairs = identify_secondary_structure_spans( in_dssp );
+
+		return testout;
+	}
+	// Func Test 4
+	// @brief determine the middle residue of our range
+	core::Size determine_middle_residue( core::Size start, core::Size end ) {
+		// Init our vector to hold this information
+		utility::vector1< core::Size > resi_vector;
+		int middle;
+
+		// First make our vector to get the size and to index later on
+		std::cout << "Vector:";
+		for ( core::Size j=start; j<=end; j++ ) {
+			std::cout << " " << j << " ";
+			resi_vector.push_back(j);
+		}
+		std::cout << std::endl;
+		std::cout << "Vector size: " << resi_vector.size() << std::endl;
+			
+		// Determine if our size is even or not
+		if ( resi_vector.size() % 2 == 0 ) {
+			middle = std::floor( resi_vector.size() / 2 );
+		} else {
+			middle = std::floor( resi_vector.size() / 2 ) + 1;
+		}
+		core::Size anchor_residue = resi_vector[middle];
+		std::cout << "Anchor Middle Residue: " << anchor_residue << std::endl;
+		return anchor_residue;
+	}
+
 	// --------------- Test Cases --------------- //
+	void test_middle_func() {
+		TR << "Running test on middle function..." << std::endl;
+		// 120, 121, 122*, 123, 124, 125  (* denotes right answer)
+		core::Size test_out1 = determine_middle_residue(120, 125);
+		// 120, 121, 122*, 123, 124  (* denotes right answer)
+		core::Size test_out2 = determine_middle_residue(120, 124);
+		TS_ASSERT( test_out1 == 122 );
+		TS_ASSERT( test_out2 == 122 );
+	}
+
 	void test_case1() {
 		TR << "Running First Test Case For SS Position Extraction (Should be 7 elements)..." << std::endl;
 		utility::vector1< std::pair< core::Size, core::Size > > vector_of_ss_pairs, control_pairs;
