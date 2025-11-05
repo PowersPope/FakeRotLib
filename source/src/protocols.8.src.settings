@@ -10,6 +10,9 @@
 ########### KEEP DIRECTORIES AND FILES IN ALPHABETICAL ORDER ###########
 
 sources = {
+  "protocols/bootcamp" : [
+    "BootCampMover",
+  ],
 	"protocols/init": [
 		"init",
 		"register1",
