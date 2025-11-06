@@ -669,3 +669,4 @@
 #include <protocols/trRosetta_protocols/movers/trRosettaProtocolMoverCreator.hh>
 
 #include <protocols/vardist_solaccess/LoadVarSolDistSasaCalculatorMover.hh>
+#include <protocols/bootcamp/BootCampMoverCreator.hh>
