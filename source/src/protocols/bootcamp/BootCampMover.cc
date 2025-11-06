@@ -20,6 +20,7 @@
 #include <core/pose/Pose.hh>
 #include <core/scoring/ScoreFunctionFactory.hh>
 #include <core/scoring/ScoreFunction.hh>
+#include <core/scoring/ScoreFunction.fwd.hh>
 #include <core/conformation/Residue.hh>
 #include <core/pack/pack_rotamers.hh>
 #include <core/pack/task/PackerTask.hh>
@@ -39,6 +40,7 @@
 #include <basic/options/keys/in.OptionKeys.gen.hh>
 #include <utility/tag/Tag.hh>
 #include <utility/pointer/memory.hh>
+#include <utility/pointer/owning_ptr.hh>
 #include <utility/pointer/owning_ptr.hh>
 #include <numeric/random/random.hh>
 #include <numeric/random/uniform.hh>
@@ -61,8 +63,10 @@ namespace bootcamp {
 	/////////////////////
 
 /// @brief Default constructor
-BootCampMover::BootCampMover():
-	protocols::moves::Mover( BootCampMover::mover_name() )
+BootCampMover::BootCampMover(): 
+	protocols::moves::Mover( BootCampMover::mover_name() ),
+	num_iterations_( 5 ), 
+	sfxn_( core::scoring::get_score_function( "ref2015" ) )
 {
 
 }
@@ -141,6 +145,21 @@ BootCampMover::apply( core::pose::Pose& mypose ){
 	TR << "Average Score of protein: " << score_overtime / steps << std::endl;
 }
 
+
+// @brief Set the scorefunction member
+void BootCampMover::set_scorefxn( core::scoring::ScoreFunctionOP scorefxn ) {
+	sfxn_ = scorefxn;
+}
+// @brief Get the scorefunction this member is using
+core::scoring::ScoreFunctionOP BootCampMover::get_scorefxn() { return sfxn_; }
+
+// @brief Set the number of iterations to pack + minimize + MonteCarlo Search
+void BootCampMover::set_num_iterations( core::Size num_iter ) {
+	num_iterations_ = num_iter;
+}
+// @brief Get the number of iterations to pack + minimize + MonteCarlo Search
+core::Size BootCampMover::get_num_iterations(){ return num_iterations_; }
+
 ////////////////////////////////////////////////////////////////////////////////
 /// @brief Show the contents of the Mover
 void
@@ -159,8 +178,26 @@ BootCampMover::parse_my_tag(
 	utility::tag::TagCOP ,
 	basic::datacache::DataMap&
 ) {
-
+	if ( tag->hasOption("num_iterations") ) {
+		num_iterations_ = tag->getOption<core::Size>("num_interations",1);
+		runtime_assert( num_iterations_ > 0 );
+	}
+	parse_score_function( tag, datamap );
+// 	parse_task_operations( tag, datamap );
 }
+
+/// @brief parse "scorefxn" XML option (can be employed virtually by derived Packing movers)
+void
+BootCampMover::parse_score_function(
+	TagCOP const tag,
+	basic::datacache::DataMap const & datamap
+)
+{
+	ScoreFunctionOP new_score_function( protocols::rosetta_scripts::parse_score_function( tag, datamap ) );
+	if ( new_score_function == nullptr ) return;
+	score_function( new_score_function );
+}
+
 void BootCampMover::provide_xml_schema( utility::tag::XMLSchemaDefinition & xsd )
 {
 
