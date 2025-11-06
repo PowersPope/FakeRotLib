@@ -89,6 +89,11 @@ public:
 		utility::tag::TagCOP tag,
 		basic::datacache::DataMap & data ) override;
 
+	void
+	parse_score_function(
+		utility::tag::TagCOP const tag,
+		basic::datacache::DataMap const & data );
+
 	//BootCampMover & operator=( BootCampMover const & src );
 
 	/// @brief required in the context of the parser/scripting scheme

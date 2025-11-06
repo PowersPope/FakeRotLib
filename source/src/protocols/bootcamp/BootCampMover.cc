@@ -33,17 +33,20 @@
 #include <core/scoring/ScoreType.hh>
 #include <protocols/moves/MonteCarlo.hh>
 #include <protocols/bootcamp/fold_tree_from_ss.hh>
+#include <protocols/rosetta_scripts/util.hh>
 
 // Basic/Utility headers
 #include <basic/Tracer.hh>
 #include <basic/options/option.hh>
 #include <basic/options/keys/in.OptionKeys.gen.hh>
 #include <utility/tag/Tag.hh>
+#include <utility/tag/Tag.fwd.hh>
 #include <utility/pointer/memory.hh>
 #include <utility/pointer/owning_ptr.hh>
 #include <utility/pointer/owning_ptr.hh>
 #include <numeric/random/random.hh>
 #include <numeric/random/uniform.hh>
+#include <utility/tag/XMLSchemaGeneration.hh>
 
 // XSD Includes
 #include <utility/tag/XMLSchemaGeneration.hh>
@@ -175,11 +178,11 @@ BootCampMover::show(std::ostream & output) const
 /// @brief parse XML tag (to use this Mover in Rosetta Scripts)
 void
 BootCampMover::parse_my_tag(
-	utility::tag::TagCOP ,
-	basic::datacache::DataMap&
+	utility::tag::TagCOP tag,
+	basic::datacache::DataMap& datamap
 ) {
 	if ( tag->hasOption("num_iterations") ) {
-		num_iterations_ = tag->getOption<core::Size>("num_interations",1);
+		num_iterations_ = tag->getOption<core::Size>("num_iterations",1);
 		runtime_assert( num_iterations_ > 0 );
 	}
 	parse_score_function( tag, datamap );
@@ -189,13 +192,13 @@ BootCampMover::parse_my_tag(
 /// @brief parse "scorefxn" XML option (can be employed virtually by derived Packing movers)
 void
 BootCampMover::parse_score_function(
-	TagCOP const tag,
+	utility::tag::TagCOP const tag,
 	basic::datacache::DataMap const & datamap
 )
 {
-	ScoreFunctionOP new_score_function( protocols::rosetta_scripts::parse_score_function( tag, datamap ) );
+	core::scoring::ScoreFunctionOP new_score_function( protocols::rosetta_scripts::parse_score_function( tag, datamap ) );
 	if ( new_score_function == nullptr ) return;
-	score_function( new_score_function );
+	set_scorefxn( new_score_function );
 }
 
 void BootCampMover::provide_xml_schema( utility::tag::XMLSchemaDefinition & xsd )
@@ -204,9 +207,11 @@ void BootCampMover::provide_xml_schema( utility::tag::XMLSchemaDefinition & xsd 
 	using namespace utility::tag;
 	AttributeList attlist;
 
+	attlist + XMLSchemaAttribute::attribute_w_default( "num_iterations", xsct_non_negative_integer, "Number of iterations to perturb, minimize, and MonteCarlo search.", "5" );
+
 	//here you should write code to describe the XML Schema for the class.  If it has only attributes, simply fill the probided AttributeList.
 
-	protocols::moves::xsd_type_definition_w_attributes( xsd, mover_name(), "Perform iterative rounds of packing, minimization, and MonteCarlo based search to find a minimized structure for a protein", attlist );
+	protocols::moves::xsd_type_definition_w_attributes( xsd, mover_name(), "", attlist );
 }
 
 
