@@ -17,6 +17,7 @@
 #include <core/kinematics/Edge.hh>
 #include <core/scoring/dssp/Dssp.hh>
 #include <protocols/bootcamp/fold_tree_from_ss.hh>
+#include <protocols/bootcamp/FoldTreeFromSS.hh>
 
 // Utility headers
 #include <utility/vector1.hh>
@@ -73,7 +74,7 @@ identify_secondary_structure_spans( std::string const & ss_string )
 // 1. A New Fold Tree (built by secondary structure elements)
 // 2. Additionally a pair/tuple that contains a Loop as the first element
 // 3. As a second element in the pair/tuple is the bool of the vector1.
-std::pair< core::kinematics::FoldTree, std::pair< utility::vector1< protocols::loops::Loop >, utility::vector1< core::Size > > >
+core::kinematics::FoldTree
 fold_tree_from_ss( core::pose::Pose inpose ) {
   // Init our return variable
   core::kinematics::FoldTree out_fold_tree;
@@ -91,11 +92,12 @@ fold_tree_from_ss( core::pose::Pose inpose ) {
 }
 
 // @brief take in a dssp based string and return a FoldTree that can be passed to a pose.
-core::kinematics::FoldTree
+protocols::bootcamp::FoldTreeFromSS
 fold_tree_from_dssp_string( std::string const & in_dssp ) {
   core::kinematics::FoldTree ft;
-  utility::vector1< protocols::loops::Loop > loops;
-	utility::vector1< core::Size > disorder_sections(in_dssp.size(), 0); // A vector of amino acid size and filled with zeros
+	utility::vector1< core::Size > disorder_sections( in_dssp.size(), 0 ); // A vector of amino acid size and filled with zeros
+	protocols::bootcamp::FoldTreeFromSS ftss( in_dssp.size() );
+
 
 // 		std::cout << "Length of our DSSP String Input: " << in_dssp.size() << std::endl;
   // Pass our sequence to our original function to extract out a vector1< pair< Size, Size >>
@@ -116,6 +118,19 @@ fold_tree_from_dssp_string( std::string const & in_dssp ) {
   // Form the initial edge, as our initial edge will always start at 1
   ft.add_edge( first_middle, 1, core::kinematics::Edge::PEPTIDE );
   ft.add_edge( first_middle, vector_dssp_pairs[1].second, core::kinematics::Edge::PEPTIDE );
+	
+	// Add in the beginning sections
+	// Second section looks at cutpointRight (cutpoint-3, cutpoint+2)
+	// For this we only care about the right most, since there is no cutpoint to he left of the section
+	core::Size cutpoint_ref = 1;
+	ftss.add_loop_to_vector( 
+			protocols::loops::Loop( 
+				vector_dssp_pairs[1].second - 3, vector_dssp_pairs[1].second + 2, vector_dssp_pairs[1].second
+				), cutpoint_ref );
+	for ( core::Size q = vector_dssp_pairs[1].second - 3; q<= vector_dssp_pairs[1].second + 2; q++ ) {
+		ftss.add_reference_to_loop_for_residue( cutpoint_ref, q );
+	}
+	cutpoint_ref++;
 
   // Generate our FoldTree by iterating through our two vector1s
   core::Size skipped = 0;
@@ -138,11 +153,54 @@ fold_tree_from_dssp_string( std::string const & in_dssp ) {
       ft.add_edge( disordered_middle, previous_end + 1, core::kinematics::Edge::PEPTIDE );
       ft.add_edge( disordered_middle, current_start - 1, core::kinematics::Edge::PEPTIDE );
       jump++;
+			// add our loop region where the cutpoints are present
+			// First section looks at cutpointLeft (cutpoint-2, cutpoint+3)
+			ftss.add_loop_to_vector( 
+					protocols::loops::Loop( 
+						vector_dssp_pairs[j].first - 2, vector_dssp_pairs[j].first + 3, vector_dssp_pairs[j].first
+						), cutpoint_ref );
+			// First Loop add each position within this window to our block
+			for ( core::Size ir=vector_dssp_pairs[j].first - 2; ir<=vector_dssp_pairs[j].first + 3; ir++ ) {
+				ftss.add_reference_to_loop_for_residue( cutpoint_ref, j );
+			}
+			cutpoint_ref++;
+			// add our loop region where the cutpoints are present
+			// Second section looks at cutpointRight (cutpoint-3, cutpoint+2)
+			ftss.add_loop_to_vector( 
+					protocols::loops::Loop( 
+						vector_dssp_pairs[j].second - 3, vector_dssp_pairs[j].second + 2, vector_dssp_pairs[j].second
+						), cutpoint_ref );
+			// Second Loop add each position within this window to our block
+			for ( core::Size ir=vector_dssp_pairs[j].second - 3; ir<=vector_dssp_pairs[j].second + 2; ir++ ) {
+				ftss.add_reference_to_loop_for_residue( cutpoint_ref, j );
+			}
+			cutpoint_ref++;
     }
 
     // First we add the jump from the previous foldtree to this new center
     ft.add_edge( first_middle, current_middle, jump );
     ft.add_edge( current_middle, current_start, core::kinematics::Edge::PEPTIDE );
+		// add our loop region where the cutpoints are present
+		// First section looks at cutpointLeft (cutpoint-2, cutpoint+3)
+		ftss.add_loop_to_vector( protocols::loops::Loop( 
+					vector_dssp_pairs[j].first - 2, vector_dssp_pairs[j].first + 3, vector_dssp_pairs[j].first
+					), cutpoint_ref );
+		// Loop to add each position within this window to our block
+		for ( core::Size ir=vector_dssp_pairs[j].first - 2; ir<=vector_dssp_pairs[j].first + 3; ir++ ) {
+			ftss.add_reference_to_loop_for_residue( cutpoint_ref, j );
+		}
+		cutpoint_ref++;
+		// add our loop region where the cutpoints are present
+		// Second section looks at cutpointRight (cutpoint-3, cutpoint+2)
+		ftss.add_loop_to_vector( protocols::loops::Loop( 
+					vector_dssp_pairs[j].second - 3, vector_dssp_pairs[j].second + 2, vector_dssp_pairs[j].second
+					), cutpoint_ref );
+		// Loop to add each position within this window to our block
+		for ( core::Size ir=vector_dssp_pairs[j].second - 3; ir<=vector_dssp_pairs[j].second + 2; ir++ ) {
+			ftss.add_reference_to_loop_for_residue( cutpoint_ref, j );
+		}
+		cutpoint_ref++;
+		// Normal logic for FoldTree generation
     if ( j == vector_dssp_pairs.size() ) {
       ft.add_edge( current_middle, in_dssp.size(), core::kinematics::Edge::PEPTIDE );
     } else {
@@ -154,8 +212,9 @@ fold_tree_from_dssp_string( std::string const & in_dssp ) {
     jump++;
   }
 
-// 		std::cout << "Fold Tree output: " << ft.to_string() << std::endl;
-  return ft;
+// 		std::cout << "Fold Tree output: " << ft.to_string() << std::endl;	
+	ssft.add_fold_tree( ft );
+  return ssft;
 }
 
 // @brief determine the middle residue of our range
