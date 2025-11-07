@@ -17,6 +17,7 @@
 #include <core/kinematics/FoldTree.hh>
 #include <core/kinematics/Edge.hh>
 #include <core/scoring/dssp/Dssp.hh>
+#include <protocols/bootcamp/FoldTreeFromSS.hh>
 
 // Utility headers
 #include <utility/vector1.hh>
@@ -39,10 +40,10 @@ utility::vector1< std::pair< core::Size, core::Size > >
 identify_secondary_structure_spans( std::string const & ss_string );
 
 // @brief This takes in a pose and returns a FoldTree for the given pose.
-core::kinematics::FoldTree fold_tree_from_ss( core::pose::Pose inpose );
+protocols::bootcamp::FoldTreeFromSS fold_tree_from_ss( core::pose::Pose inpose );
 
 // @brief take in a dssp based string and return a FoldTree that can be passed to a pose.
-core::kinematics::FoldTree fold_tree_from_dssp_string( std::string const & in_dssp );
+protocols::bootcamp::FoldTreeFromSS fold_tree_from_dssp_string( std::string const & in_dssp );
 
 // @brief determine the middle residue of our range
 core::Size determine_middle_residue( core::Size start, core::Size end );
