@@ -69,9 +69,16 @@ identify_secondary_structure_spans( std::string const & ss_string )
 }
 
 // @brief This takes in a pose and returns a FoldTree for the given pose.
-core::kinematics::FoldTree fold_tree_from_ss( core::pose::Pose inpose ) {
+// This returns three different values
+// 1. A New Fold Tree (built by secondary structure elements)
+// 2. Additionally a pair/tuple that contains a Loop as the first element
+// 3. As a second element in the pair/tuple is the bool of the vector1.
+std::pair< core::kinematics::FoldTree, std::pair< utility::vector1< protocols::loops::Loop >, utility::vector1< core::Size > > >
+fold_tree_from_ss( core::pose::Pose inpose ) {
   // Init our return variable
   core::kinematics::FoldTree out_fold_tree;
+  utility::vector1< protocols::loops::Loop > loops;
+	utility::vector1< core::Size > disorder_sections; 
 
   // Initialize a dssp, and extract out our secondary structure sequence
   core::scoring::dssp::Dssp dssp( inpose );
@@ -84,8 +91,11 @@ core::kinematics::FoldTree fold_tree_from_ss( core::pose::Pose inpose ) {
 }
 
 // @brief take in a dssp based string and return a FoldTree that can be passed to a pose.
-core::kinematics::FoldTree fold_tree_from_dssp_string( std::string const & in_dssp ) {
+core::kinematics::FoldTree
+fold_tree_from_dssp_string( std::string const & in_dssp ) {
   core::kinematics::FoldTree ft;
+  utility::vector1< protocols::loops::Loop > loops;
+	utility::vector1< core::Size > disorder_sections(in_dssp.size(), 0); // A vector of amino acid size and filled with zeros
 
 // 		std::cout << "Length of our DSSP String Input: " << in_dssp.size() << std::endl;
   // Pass our sequence to our original function to extract out a vector1< pair< Size, Size >>
