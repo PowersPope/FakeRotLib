@@ -11,6 +11,8 @@
 /// @brief
 /// @author Andrew Powers (apowers4@uoregon.edu)
 
+#ifndef INCLUDED_protocols_bootcamp_FoldTreeContainerSS_hh
+#define INCLUDED_protocols_bootcamp_FoldTreeContainerSS_hh
 
 // Main Headers
 #include <core/pose/Pose.hh>
@@ -21,6 +23,7 @@
 
 // Utility headers
 #include <utility/vector1.hh>
+#include <utility/VirtualBase.hh>
 #include <basic/Tracer.hh>
 
 /// Project headers
@@ -35,35 +38,44 @@
 namespace protocols {
 namespace bootcamp {
 
-class FoldTreeFromSS {
-	public:
-// 		FoldTreeFromSS( std::string const & ssstring );
-		FoldTreeFromSS( core::Size const & stringSize );
-		~FoldTreeFromSS();
+// @brief A class to compute the FoldTree, and CCD Loop formation
+// which will be used with the given FoldTree produced
+class FoldTreeFromSS : public utility::VirtualBase {
 
-		core::kinematics::FoldTree const & fold_tree() const;
+public:
 
-		protocols::loops::Loop const & loop( core::Size index ) const;
+	// @brief Constructor with Options
+	FoldTreeFromSS( core::Size const & stringSize );
 
-		core::Size loop_for_residue( core::Size seqpose ) const;
+	// @brief Destructor
+	~FoldTreeFromSS();
 
-		void add_loop_to_vector( 
-				protocols::loops::Loop const & loop, 
-				core::Size const & index 
-				);
+	core::kinematics::FoldTree const & fold_tree() const;
 
-		void add_reference_to_loop_for_residue( 
-				core::Size const & ref, 
-				core::Sixe index
-				);
+	protocols::loops::Loop const & loop( core::Size index ) const;
 
-		void add_fold_tree( core::kinematics::FoldTree );
+	core::Size loop_for_residue( core::Size seqpose ) const;
 
-	private:
-		core::kinematics::FoldTree ft_;
-		utility::vector1< protocols::loops::Loop > loop_vector_;
-		utility::vector1< core::Size > loop_for_residue_;
+	void add_loop_to_vector( 
+			protocols::loops::Loop const & loop, 
+			core::Size const & index 
+			);
+
+	void add_reference_to_loop_for_residue( 
+			core::Size const & ref, 
+			core::Size const & index
+			);
+
+	void add_fold_tree( core::kinematics::FoldTree ft );
+
+private:
+	core::kinematics::FoldTree ft_;
+	utility::vector1< protocols::loops::Loop > loop_vector_;
+	utility::vector1< core::Size > loop_for_residue_;
 };
 
 } // bootcamp
 } // protocols
+
+
+#endif

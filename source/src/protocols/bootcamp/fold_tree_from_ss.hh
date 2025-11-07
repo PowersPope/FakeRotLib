@@ -7,17 +7,19 @@
 // (c) For more information, see http://www.rosettacommons.org. Questions about this can be
 // (c) addressed to University of Washington CoMotion, email: license@uw.edu.
 
-/// @file   test/protocols/boocamp/FoldTreeFromSS.cxxtest.hh
+/// @file   test/protocols/boocamp/FoldTreeContainerSS.cxxtest.hh
 /// @brief
 /// @author Andrew Powers (apowers4@uoregon.edu)
 
+#ifndef INCLUDED_protocols_bootcamp_fold_tree_from_ss_hh
+#define INCLUDED_protocols_bootcamp_fold_tree_from_ss_hh
 
 // Main Headers
 #include <core/pose/Pose.hh>
 #include <core/kinematics/FoldTree.hh>
 #include <core/kinematics/Edge.hh>
 #include <core/scoring/dssp/Dssp.hh>
-#include <protocols/bootcamp/FoldTreeFromSS.hh>
+#include <protocols/bootcamp/FoldTreeContainerSS.hh>
 
 // Utility headers
 #include <utility/vector1.hh>
@@ -40,13 +42,16 @@ utility::vector1< std::pair< core::Size, core::Size > >
 identify_secondary_structure_spans( std::string const & ss_string );
 
 // @brief This takes in a pose and returns a FoldTree for the given pose.
-protocols::bootcamp::FoldTreeFromSS fold_tree_from_ss( core::pose::Pose inpose );
+FoldTreeFromSS fold_tree_from_ss( core::pose::Pose inpose );
 
 // @brief take in a dssp based string and return a FoldTree that can be passed to a pose.
-protocols::bootcamp::FoldTreeFromSS fold_tree_from_dssp_string( std::string const & in_dssp );
+FoldTreeFromSS fold_tree_from_dssp_string( std::string const & in_dssp );
 
 // @brief determine the middle residue of our range
 core::Size determine_middle_residue( core::Size start, core::Size end );
 
 } // bootcamp
 } // protocols
+
+
+#endif

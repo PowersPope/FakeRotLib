@@ -11,6 +11,8 @@
 
 sources = {
   "protocols/bootcamp" : [
+    "fold_tree_from_ss",
+    "FoldTreeContainerSS",
     "BootCampMover",
   ],
 	"protocols/init": [

@@ -10,9 +10,10 @@
 ########### KEEP DIRECTORIES AND FILES IN ALPHABETICAL ORDER ###########
 
 sources = {
-  "protocols/bootcamp" : [
-    "fold_tree_from_ss",
-  ],
+#  "protocols/bootcamp" : [
+#    "fold_tree_from_ss",
+#    "FoldTreeContainerSS",
+#  ],
 	"protocols/antibody_legacy": [
 		"AntibodyClass",
 		"AntibodyModeler",

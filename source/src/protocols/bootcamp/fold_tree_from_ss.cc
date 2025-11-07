@@ -7,7 +7,7 @@
 // (c) For more information, see http://www.rosettacommons.org. Questions about this can be
 // (c) addressed to University of Washington CoMotion, email: license@uw.edu.
 
-/// @file   test/protocols/boocamp/FoldTreeFromSS.cxxtest.hh
+/// @file   test/protocols/boocamp/FoldTreeContainerSS.cxxtest.hh
 /// @brief
 /// @author Andrew Powers (apowers4@uoregon.edu)
 
@@ -17,7 +17,7 @@
 #include <core/kinematics/Edge.hh>
 #include <core/scoring/dssp/Dssp.hh>
 #include <protocols/bootcamp/fold_tree_from_ss.hh>
-#include <protocols/bootcamp/FoldTreeFromSS.hh>
+#include <protocols/bootcamp/FoldTreeContainerSS.hh>
 
 // Utility headers
 #include <utility/vector1.hh>
@@ -71,26 +71,24 @@ identify_secondary_structure_spans( std::string const & ss_string )
 
 // @brief This takes in a pose and returns a FoldTreeFromSS class object for the given pose.
 // core::kinematics::FoldTree
-protocols::bootcamp::FoldTreeFromSS
+FoldTreeFromSS
 fold_tree_from_ss( core::pose::Pose inpose ) {
-  // Init our return variable
-	protocols::bootcamp::FoldTreeFromSS out_ft_class;
 
   // Initialize a dssp, and extract out our secondary structure sequence
   core::scoring::dssp::Dssp dssp( inpose );
   std::string dssp_string = dssp.get_dssp_secstruct();
 
   // Pass our dssp string to fold_tree_from_dssp_string to get our new FoldTree
-  out_ft_class = fold_tree_from_dssp_string( dssp_string );
+  FoldTreeFromSS out_ft_class = fold_tree_from_dssp_string( dssp_string );
 
-  return out_fold_tree;
+  return out_ft_class;
 }
 
 // @brief take in a dssp based string and return a FoldTree that can be passed to a pose.
-protocols::bootcamp::FoldTreeFromSS
+FoldTreeFromSS
 fold_tree_from_dssp_string( std::string const & in_dssp ) {
   core::kinematics::FoldTree ft;
-	protocols::bootcamp::FoldTreeFromSS ftss( in_dssp.size() );
+	FoldTreeFromSS ftss( in_dssp.size() );
 
 
 // 		std::cout << "Length of our DSSP String Input: " << in_dssp.size() << std::endl;
@@ -207,8 +205,8 @@ fold_tree_from_dssp_string( std::string const & in_dssp ) {
   }
 
 // 		std::cout << "Fold Tree output: " << ft.to_string() << std::endl;	
-	ssft.add_fold_tree( ft );
-  return ssft;
+	ftss.add_fold_tree( ft );
+  return ftss;
 }
 
 // @brief determine the middle residue of our range

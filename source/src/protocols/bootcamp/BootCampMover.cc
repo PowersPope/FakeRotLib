@@ -33,7 +33,9 @@
 #include <core/scoring/ScoreType.hh>
 #include <protocols/moves/MonteCarlo.hh>
 #include <protocols/bootcamp/fold_tree_from_ss.hh>
+#include <protocols/bootcamp/FoldTreeContainerSS.hh>
 #include <protocols/rosetta_scripts/util.hh>
+#include <protocols/loops/loop_closure/ccd/CCDLoopClosureMover.hh>
 
 // Basic/Utility headers
 #include <basic/Tracer.hh>
@@ -98,10 +100,11 @@ BootCampMover::apply( core::pose::Pose& mypose ){
 	mm.set_chi( true );
 	core::optimization::MinimizerOptions min_opts( "lbfgs_armijo_atol", 0.01, true );
 	core::optimization::AtomTreeMinimizer atm;
+	core::kinematics::MoveMapOP mmop( mm.clone() );
 
 	// Generate our dssp sequence
-	core::kinematics::FoldTree ft = protocols::bootcamp::fold_tree_from_ss( mypose );
-	mypose.fold_tree( ft );
+	FoldTreeFromSS ftfss = fold_tree_from_ss( mypose );
+	mypose.fold_tree( ftfss.fold_tree() );
 	correctly_add_cutpoint_variants( mypose );
 
 	// Setup our MonteCarlo object
@@ -126,6 +129,15 @@ BootCampMover::apply( core::pose::Pose& mypose ){
 			core::Real orig_psi = mypose.psi( randres );
 			mypose.set_phi( randres, orig_phi + pert1 );
 			mypose.set_psi( randres, orig_psi + pert2 );
+
+			// If region perturbed is within our loop region designated then apply this Loop fixer
+			core::Size loop_index( ftfss.loop_for_residue( randres ) );
+			if ( loop_index != 0 ) { 
+				protocols::loops::Loop ft_loop( ftfss.loop( loop_index ) );
+				TR << "Running Loop Closure through residues " << ft_loop.start() << "-" << ft_loop.stop() << ", with cutpoint: " << ft_loop.cut() << std::endl;
+				protocols::loops::loop_closure::ccd::CCDLoopClosureMover ccd( ft_loop, mmop );
+				ccd.apply( mypose );
+			}
 
 			// Pack our pose
 			core::pack::task::PackerTaskOP repack_task = core::pack::task::TaskFactory::create_packer_task( mypose );
