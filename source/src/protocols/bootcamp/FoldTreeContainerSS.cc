@@ -38,7 +38,11 @@ namespace bootcamp {
 class FoldTreeFromSS {
 	public:
 		// @brief Construct our class
-		FoldTreeFromSS( std::string const & ssstring )
+// 		FoldTreeFromSS( std::string const & ssstring );
+		FoldTreeFromSS( core::Size const & stringSize ) : 
+		loop_for_residue_( stringSize, 0 ) {};
+		// @brief Deconstructor
+		~FoldTreeFromSS(){};
 
 		//@brief return the foldtree that was computed on start up
 		core::kinematics::FoldTree const & fold_tree() const { return ft_; }
@@ -59,12 +63,15 @@ class FoldTreeFromSS {
 		}
 
 		// @brief add element to loop_for_residue_
-		void add_loop_for_residue_element( core::Size const & index ) { loop_for_residue_.push_back( index ); }
+		void add_reference_to_loop_for_residue( core::Size const & ref, core::Size index ) { loop_for_residue_[ index ] = ref; }
+
+		// @brief add a fold tree
+		void add_fold_tree( core::kinematics::FoldTree ft ) { ft_ = ft; }
 
 	private:
-		core::kinematics::FoldTree ft_;
-		utility::vector1< protocols::loops::Loop > loop_vector_;
-		utility::vector1< core::Size > loop_for_residue_;
+		core::kinematics::FoldTree ft_; // FoldTree output we produce and can use on pose
+		utility::vector1< protocols::loops::Loop > loop_vector_; // Vector1 that holds our Loop objects and can be accessed by indexing
+		utility::vector1< core::Size > loop_for_residue_; // The indices needed to match up with our loop_vector_, so you grab the right Loop mover.
 };
 
 } // bootcamp

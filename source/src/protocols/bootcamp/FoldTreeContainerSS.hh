@@ -37,7 +37,9 @@ namespace bootcamp {
 
 class FoldTreeFromSS {
 	public:
-		FoldTreeFromSS( std::string const & ssstring );
+// 		FoldTreeFromSS( std::string const & ssstring );
+		FoldTreeFromSS( core::Size const & stringSize );
+		~FoldTreeFromSS();
 
 		core::kinematics::FoldTree const & fold_tree() const;
 
@@ -45,9 +47,17 @@ class FoldTreeFromSS {
 
 		core::Size loop_for_residue( core::Size seqpose ) const;
 
-		void add_loop_to_vector( protocols::loops::Loop const & loop, core::Size const & index );
+		void add_loop_to_vector( 
+				protocols::loops::Loop const & loop, 
+				core::Size const & index 
+				);
 
-		void add_loop_for_residue_element( core::Size const & index );
+		void add_reference_to_loop_for_residue( 
+				core::Size const & ref, 
+				core::Sixe index
+				);
+
+		void add_fold_tree( core::kinematics::FoldTree );
 
 	private:
 		core::kinematics::FoldTree ft_;
